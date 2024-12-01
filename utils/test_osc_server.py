@@ -1,6 +1,7 @@
 from pythonosc.osc_server import AsyncIOOSCUDPServer
 from pythonosc.dispatcher import Dispatcher
 import asyncio
+import json
 
 LOOP_FLAG = True
 
@@ -11,9 +12,10 @@ class OSCServer:
         self.ip = ip
         self.port = port
         self.dispatcher = Dispatcher()
-        self.dispatcher.map("/test", self.test_handler)
+        self.dispatcher.map("/test", self.handle_test)
+        self.dispatcher.map("/params", self.handle_params)
 
-    def test_handler(self, address, *args):
+    def handle_test(self, address, *args):
         print(f"{address}: {args}")
         self.loop_flag = False
 
@@ -26,6 +28,10 @@ class OSCServer:
         transport, protocol = await server.create_serve_endpoint()  # Create datagram endpoint and start serving
         await self.loop()  # Enter main loop of program
         transport.close()  # Clean up serve endpoint
+
+    def handle_params(self, address, json_data): # convert json to dict
+        parameters = json.loads(json_data)
+        print("Received parameters:", parameters)
 
     def run(self):
         asyncio.run(self.init_main())

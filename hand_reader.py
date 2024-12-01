@@ -2,6 +2,11 @@ import cv2
 import mediapipe as mp
 import time
 import math as math
+from pythonosc.udp_client import SimpleUDPClient
+import json
+
+UDP_IP = "127.0.0.1"  
+UDP_PORT = 8000
 
 COLOR_DIST = (255, 122, 178)
 COLOR_SKELETON = (255, 255, 255)
@@ -151,8 +156,9 @@ class HandTrackingDynamic:
             cv2.line(frame, (c[0][0], c[0][1]), (c[1][0], c[1][1]), COLOR_DIST_HANDS, t)
         return distance
 
-    def sendParams(self):
-        pass
+    def sendOSC(self, client, msg):
+        data = json.dumps(self.params)
+        client.send_message(msg, data)
                     
 if __name__ == "__main__":
 
@@ -169,6 +175,7 @@ if __name__ == "__main__":
     print(f"[INFO] Initiated camera capture ({width}x{height})")
 
     detector = HandTrackingDynamic()
+    client = SimpleUDPClient(UDP_IP, UDP_PORT)
 
     if not cap.isOpened():
         print("[ERROR] Cannot open camera")
@@ -186,6 +193,7 @@ if __name__ == "__main__":
             frame = detector.findFingers(frame)
             frame = detector.findPosition(frame)
             detector.calculateParams(frame)
+            detector.sendOSC(client, '/params')
 
             ctime = time.time()
             fps = 1 / (ctime - ptime)
