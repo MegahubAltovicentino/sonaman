@@ -111,7 +111,8 @@ class HandTrackingDynamic:
             self.params['p9'] = 0
             self.params['p10'] = 0
             self.params['p11'] = 0
-        print(self.params)
+        
+        # print(self.params) # DEBUG
         return frame
     
     def findFingerDistance(self, p1, p2, frame, draw=True, r=10, t=3):
