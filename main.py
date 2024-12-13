@@ -29,17 +29,30 @@ class HandTrackingDynamic:
         self.tipIds = [4, 8, 12, 16, 20]
         self.lmsList = [[], []]
         self.params = {
-            'p1': 0, # dist between thumb and index
-            'p2': 0, # dist between thumb and middle
-            'p3': 0, # dist between thumb and ring
-            'p4': 0, # dist between thumb and pinky
-            'p5': 0, # pinch 
-            'p6': 0, # same as above, for second hand in frame
-            'p7': 0,
-            'p8': 0,
-            'p9': 0, 
-            'p10': 0,
-            'p11': 0, # dist between hands 
+            'p1': None, # dist between thumb and index
+            'p2': None, # dist between thumb and middle
+            'p3': None, # dist between thumb and ring
+            'p4': None, # dist between thumb and pinky
+            'p5': None, # pinch 
+            'p6': None, # same as above, for second hand in frame
+            'p7': None,
+            'p8': None,
+            'p9': None, 
+            'p10': None,
+            'p11': None, # dist between hands 
+        }
+        self.last_params = {
+            'p1': [None, 50], 
+            'p2': [None, 50],
+            'p3': [None, 50],
+            'p4': [None, 50],
+            'p5': [None, 50],
+            'p6': [None, 50],
+            'p7': [None, 50],
+            'p8': [None, 50],
+            'p9': [None, 50],
+            'p10': [None, 50],
+            'p11': [None, 50],
         }
 
     def findFingers(self, frame, draw=True):
@@ -64,13 +77,10 @@ class HandTrackingDynamic:
                     yList.append(cy)
                     if len(self.lmsList) > handNo:
                         self.lmsList[handNo].append([lmk_id, cx, cy])
-                # if draw: # bounding boxes
-                #     xmin, xmax = min(xList), max(xList)
-                #     ymin, ymax = min(yList), max(yList)
-                #     cv2.rectangle(frame, (xmin - 20, ymin - 20),(xmax + 20, ymax + 20), (0, 255, 0), 2)
         return frame
         
     def calculateParams(self, frame):
+
         if self.results.multi_hand_landmarks:
             if len(self.results.multi_hand_landmarks) == 1:
                 hand = self.results.multi_hand_landmarks[0]
@@ -79,12 +89,12 @@ class HandTrackingDynamic:
                 self.params['p3'] = self.findFingerDistance(hand.landmark[4], hand.landmark[16], frame, draw=True)
                 self.params['p4'] = self.findFingerDistance(hand.landmark[4], hand.landmark[20], frame, draw=True)
                 self.params['p5'] = self.findPinch(frame, hand)
-                self.params['p6'] = 0
-                self.params['p7'] = 0
-                self.params['p8'] = 0
-                self.params['p9'] = 0
-                self.params['p10'] = 0
-                self.params['p11'] = 0
+                self.params['p6'] = None
+                self.params['p7'] = None
+                self.params['p8'] = None
+                self.params['p9'] = None
+                self.params['p10'] = None
+                self.params['p11'] = None
             elif len(self.results.multi_hand_landmarks) == 2: # 2nd hand in frame
                 hand1 = self.results.multi_hand_landmarks[0]
                 self.params['p1'] = self.findFingerDistance(hand1.landmark[4], hand1.landmark[8], frame, draw=True)
@@ -100,17 +110,17 @@ class HandTrackingDynamic:
                 self.params['p10'] = self.findPinch(frame, hand2)
                 self.params['p11'] = self.findHandDistance(frame, hand1, hand2)
         else:
-            self.params['p1'] = 0
-            self.params['p2'] = 0
-            self.params['p3'] = 0
-            self.params['p4'] = 0
-            self.params['p5'] = 0
-            self.params['p6'] = 0
-            self.params['p7'] = 0
-            self.params['p8'] = 0
-            self.params['p9'] = 0
-            self.params['p10'] = 0
-            self.params['p11'] = 0
+            self.params['p1'] = None
+            self.params['p2'] = None
+            self.params['p3'] = None
+            self.params['p4'] = None
+            self.params['p5'] = None
+            self.params['p6'] = None
+            self.params['p7'] = None
+            self.params['p8'] = None
+            self.params['p9'] = None
+            self.params['p10'] = None
+            self.params['p11'] = None
         
         # print(self.params) # DEBUG
         return frame
@@ -158,12 +168,24 @@ class HandTrackingDynamic:
         return distance
 
     def sendOSC(self, client, msg):
-        data = json.dumps(self.params)
-        client.send_message(msg, data)
+        for p, val in self.params.items():
+            if val and self.last_params[p][1] > 3:
+                if val < 50:
+                    if self.last_params[p][0]:
+                        if abs(val - self.last_params[p][0]) > 20:
+                            client.send_message(msg, str(p))
+                            self.last_params[p][1] = 0
+                    else:
+                        client.send_message(msg, str(p))    
+                        self.last_params[p][1] = 0
+            self.last_params[p] = [self.params[p], self.last_params[p][1] + 1]
+
+        # data_json = json.dumps(data)
+        # client.send_message(msg, data_json)
                     
 if __name__ == "__main__":
 
-    cam_index = 0
+    cam_index = 1
     ctime = 0 
     ptime = 0 
     scale_factor_in = 0.5
