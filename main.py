@@ -134,7 +134,7 @@ class HandTrackingDynamic:
               cv2.circle(frame, (x1, y1), r, COLOR_FINGERS, cv2.FILLED)
               cv2.circle(frame, (x2, y2), r, COLOR_FINGERS, cv2.FILLED)
         distance = math.hypot(x2-x1, y2-y1)
-        return distance    
+        return [distance, p2.y]
     
     def findPinch(self, frame, hand): # get average distance between fingers and thumb
         h, w, _ = frame.shape
@@ -146,7 +146,7 @@ class HandTrackingDynamic:
             y = hand.landmark[i].y * h
             distance = distance + math.hypot((x0-x), (y0-y))
         distance = distance / 4   
-        return distance
+        return [distance, hand.landmark[4].y]
 
     def findHandDistance(self, frame, hand1, hand2, draw=True, r=10, t=1):
         h, w, _ = frame.shape
@@ -165,18 +165,24 @@ class HandTrackingDynamic:
         distance = math.hypot(c[0][0] - c[1][0], c[0][1] - c[1][1])
         if draw:
             cv2.line(frame, (c[0][0], c[0][1]), (c[1][0], c[1][1]), COLOR_DIST_HANDS, t)
-        return distance
+        return [distance, None]
 
     def sendOSC(self, client, msg):
         for p, val in self.params.items():
-            if val and self.last_params[p][1] > 3:
-                if val < 50:
-                    if self.last_params[p][0]:
-                        if abs(val - self.last_params[p][0]) > 20:
-                            client.send_message(msg, str(p))
-                            self.last_params[p][1] = 0
-                    else:
-                        client.send_message(msg, str(p))    
+            if val and self.last_params[p][1] > 5:
+                y = val[1] # get height of point
+                val = val[0] # get just the value
+                if int(p[1:]) == 11:
+                    client.send_message(msg, [p, val])
+                if int(p[1:]) < 6: # first hand
+                    if val < 40:
+                        if self.last_params[p][0]:    
+                            if abs(val - self.last_params[p][0][0]) > 30: # filter out values that are too close to last value
+                                client.send_message(msg, p)
+                                self.last_params[p][1] = 0
+                else: # second hand
+                    if val < 40:
+                        client.send_message(msg, [p, y])
                         self.last_params[p][1] = 0
             self.last_params[p] = [self.params[p], self.last_params[p][1] + 1]
 
