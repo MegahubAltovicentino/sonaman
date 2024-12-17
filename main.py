@@ -96,13 +96,13 @@ class HandTrackingDynamic:
                 self.params['p10'] = None
                 self.params['p11'] = None
             elif len(self.results.multi_hand_landmarks) == 2: # 2nd hand in frame
-                hand1 = self.results.multi_hand_landmarks[0]
+                hand1 = self.results.multi_hand_landmarks[1]
                 self.params['p1'] = self.findFingerDistance(hand1.landmark[4], hand1.landmark[8], frame, draw=True)
                 self.params['p2'] = self.findFingerDistance(hand1.landmark[4], hand1.landmark[12], frame, draw=True)
                 self.params['p3'] = self.findFingerDistance(hand1.landmark[4], hand1.landmark[16], frame, draw=True)
                 self.params['p4'] = self.findFingerDistance(hand1.landmark[4], hand1.landmark[20], frame, draw=True)
                 self.params['p5'] = self.findPinch(frame, hand1)
-                hand2 = self.results.multi_hand_landmarks[1]
+                hand2 = self.results.multi_hand_landmarks[0]
                 self.params['p6'] = self.findFingerDistance(hand2.landmark[4], hand2.landmark[8], frame, draw=True)
                 self.params['p7'] = self.findFingerDistance(hand2.landmark[4], hand2.landmark[12], frame, draw=True)
                 self.params['p8'] = self.findFingerDistance(hand2.landmark[4], hand2.landmark[16], frame, draw=True)
@@ -174,7 +174,7 @@ class HandTrackingDynamic:
                 val = val[0] # get just the value
                 if int(p[1:]) == 11:
                     client.send_message(msg, [p, val])
-                if int(p[1:]) < 6: # first hand
+                if int(p[1:]) < 5: # first hand
                     if val < 40:
                         if self.last_params[p][0]:    
                             if abs(val - self.last_params[p][0][0]) > 30: # filter out values that are too close to last value
